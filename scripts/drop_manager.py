@@ -54,7 +54,7 @@ class DropManager:
         current_time = (rospy.get_rostime() - self.node_start_time).to_sec()
         
         for period in active_periods:
-            start = period["start"]
+            start = period["start_time"]
             end = start + period["duration"]
             if start <= current_time <= end:
                 return True
