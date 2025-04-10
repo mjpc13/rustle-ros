@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import signal
 import os
 import rosbag
 import subprocess
@@ -52,6 +53,9 @@ class DropManager:
     def is_active(self, active_periods):
         """Check if current ROS time is within any active period"""
         current_time = (rospy.get_rostime() - self.node_start_time).to_sec()
+
+        if len(active_periods) == 0 :
+            return True
         
         for period in active_periods:
             start = period["start_time"]
@@ -69,7 +73,12 @@ class DropManager:
             "rosrun", "topic_tools", "drop",
             topic, str(drop_rate[0]), str(drop_rate[1]), f"{topic}_drop"
         ]
-        self.drop_processes[sensor] = subprocess.Popen(args)
+
+        self.drop_processes[sensor] = subprocess.Popen(
+            args,
+            preexec_fn=os.setsid
+        )
+
         rospy.loginfo(f"Started drop node for {sensor}")
 
     def start_relay_node(self, sensor, topic):
@@ -78,14 +87,24 @@ class DropManager:
             return
             
         args = ["rosrun", "topic_tools", "relay", topic, f"{topic}_drop"]
-        self.relay_processes[sensor] = subprocess.Popen(args)
+
+        self.relay_processes[sensor] = subprocess.Popen(
+            args,
+            preexec_fn=os.setsid
+        )
+
         rospy.loginfo(f"Started relay for {sensor}")
 
     def stop_node(self, process_dict, sensor):
-        """Stop a running node"""
+        """Stop a running node and its process group"""
         if sensor in process_dict:
-            process_dict[sensor].terminate()
-            process_dict[sensor].wait()
+            process = process_dict[sensor]
+            try:
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                process.wait()
+                rospy.loginfo(f"Stopped {sensor} node")
+            except Exception as e:
+                rospy.logwarn(f"Error killing {sensor} process: {e}")
             del process_dict[sensor]
             rospy.loginfo(f"Stopped {sensor} node")
 
