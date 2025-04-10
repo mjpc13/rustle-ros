@@ -98,9 +98,9 @@ class CutManager:
             active_periods = config["active_periods"]
 
             if self.is_active(active_periods):
-                self.start_relay_node(sensor, topic)
-            else:
                 self.stop_node(self.relay_processes, sensor)
+            else:
+                self.start_relay_node(sensor, topic)
 
     def shutdown(self):
         """Cleanup on shutdown"""
