@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import rospy
+import os
+import rosbags
 import subprocess
 from rospy import Time
 
