@@ -4,6 +4,7 @@ import signal
 import os
 import rosbag
 import subprocess
+from rostopic import get_topic_class
 from rospy import Time
 
 
@@ -35,6 +36,24 @@ def get_earliest_rosbag_timestamp():
     return rospy.Time(secs, nsecs)
 
 
+def get_first_timestamp(topic):
+
+    msg = rospy.wait_for_message(topic, rospy.AnyMsg)
+
+    # Try to deserialize the header if it exists
+    msg_class, real_topic, _ = get_topic_class(topic)
+
+    rospy.logwarn(f"Failed to read {topic}")
+
+    if not msg_class:
+        raise ValueError(f"Cannot determine message type for topic: {topic}")
+    
+    deserialized_msg = msg_class().deserialize(msg._buff)
+    if not hasattr(deserialized_msg, 'header'):
+        raise AttributeError(f"Message on topic {topic} has no header")
+    
+    return deserialized_msg.header.stamp
+
 class DropManager:
     def __init__(self):
         self.drop_processes = {}
@@ -44,7 +63,12 @@ class DropManager:
         
         # Load parameters
         self.drop_config = rospy.get_param("drop_list")
+        self.algo_topic = rospy.get_param("algo_topic")
         self.update_interval = rospy.Duration(0.1)  # Check every 0.1 second
+
+        self.init_nodes() 
+
+        self.node_start_time = get_first_timestamp(self.algo_topic)
         
         # Start periodic update
         self.timer = rospy.Timer(self.update_interval, self.update_nodes)
@@ -107,6 +131,15 @@ class DropManager:
                 rospy.logwarn(f"Error killing {sensor} process: {e}")
             del process_dict[sensor]
             rospy.loginfo(f"Stopped {sensor} node")
+
+    def init_nodes(self, event):
+        """Initial update check"""
+        for config in self.drop_config:
+            sensor = config["sensor"]
+            topic = config["topic"]
+
+            self.stop_node(self.drop_processes, sensor)
+            self.start_relay_node(sensor, topic)
 
     def update_nodes(self, event):
         """Periodic update check"""
