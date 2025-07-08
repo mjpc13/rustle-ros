@@ -132,7 +132,7 @@ class DropManager:
             del process_dict[sensor]
             rospy.loginfo(f"Stopped {sensor} node")
 
-    def init_nodes(self, event):
+    def init_nodes(self):
         """Initial update check"""
         for config in self.drop_config:
             sensor = config["sensor"]
@@ -141,7 +141,7 @@ class DropManager:
             self.stop_node(self.drop_processes, sensor)
             self.start_relay_node(sensor, topic)
 
-    def update_nodes(self, event):
+    def update_nodes(self):
         """Periodic update check"""
         for config in self.drop_config:
             sensor = config["sensor"]
