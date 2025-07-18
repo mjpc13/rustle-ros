@@ -25,7 +25,7 @@ def get_earliest_rosbag_timestamp():
                     if earliest_time is None or start_time < earliest_time:
                         earliest_time = start_time
             except Exception as e:
-                rospy.logwarn(f"Failed to read {bag_path}: {e}")
+                rospy.logwarn("Failed to read {}: {}".format(bag_path, e))
 
     if earliest_time is None:
         raise ValueError("No valid bag files found or all were unreadable.")
@@ -43,14 +43,14 @@ def get_first_timestamp(topic):
     # Try to deserialize the header if it exists
     msg_class, real_topic, _ = get_topic_class(topic)
 
-    rospy.logwarn(f"Failed to read {topic}")
+    rospy.logwarn("Failed to read {topic}".format(topic))
 
     if not msg_class:
-        raise ValueError(f"Cannot determine message type for topic: {topic}")
+        raise ValueError("Cannot determine message type for topic: {}".format(topic))
     
     deserialized_msg = msg_class().deserialize(msg._buff)
     if not hasattr(deserialized_msg, 'header'):
-        raise AttributeError(f"Message on topic {topic} has no header")
+        raise AttributeError("Message on topic {} has no header".format(topic))
     
     return deserialized_msg.header.stamp
 
@@ -95,7 +95,7 @@ class DropManager:
             
         args = [
             "rosrun", "topic_tools", "drop",
-            topic, str(drop_rate[0]), str(drop_rate[1]), f"{topic}_drop"
+            topic, str(drop_rate[0]), str(drop_rate[1]), "{}_drop".format(topic)
         ]
 
         self.drop_processes[sensor] = subprocess.Popen(
@@ -103,21 +103,21 @@ class DropManager:
             preexec_fn=os.setsid
         )
 
-        rospy.loginfo(f"Started drop node for {sensor}")
+        rospy.loginfo("Started drop node for {}".format(sensor))
 
     def start_relay_node(self, sensor, topic):
         """Start a relay node when drops are inactive"""
         if sensor in self.relay_processes:
             return
             
-        args = ["rosrun", "topic_tools", "relay", topic, f"{topic}_drop"]
+        args = ["rosrun", "topic_tools", "relay", topic, "{}_drop".format(topic)]
 
         self.relay_processes[sensor] = subprocess.Popen(
             args,
             preexec_fn=os.setsid
         )
 
-        rospy.loginfo(f"Started relay for {sensor}")
+        rospy.loginfo("Started relay for {}".format(sensor))
 
     def stop_node(self, process_dict, sensor):
         """Stop a running node and its process group"""
@@ -126,11 +126,11 @@ class DropManager:
             try:
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 process.wait()
-                rospy.loginfo(f"Stopped {sensor} node")
+                rospy.loginfo("Stopped {} node".format(sensor))
             except Exception as e:
-                rospy.logwarn(f"Error killing {sensor} process: {e}")
+                rospy.logwarn("Error killing {} process: {}".format(sensor,e))
             del process_dict[sensor]
-            rospy.loginfo(f"Stopped {sensor} node")
+            rospy.loginfo("Stopped {} node".format(sensor))
 
     def init_nodes(self):
         """Initial update check"""
