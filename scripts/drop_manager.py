@@ -38,8 +38,9 @@ def get_earliest_rosbag_timestamp():
 
 def get_first_timestamp(topic):
 
-    msg = rospy.wait_for_message(topic, rospy.AnyMsg)
-
+    for _ in range(0,2):
+        msg = rospy.wait_for_message(topic, rospy.AnyMsg)
+        
     # Try to deserialize the header if it exists
     msg_class, real_topic, _ = get_topic_class(topic)
 
