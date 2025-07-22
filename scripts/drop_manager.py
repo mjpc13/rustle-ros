@@ -36,11 +36,12 @@ def get_earliest_rosbag_timestamp():
     return rospy.Time(secs, nsecs)
 
 
-def get_first_timestamp(topic):
+def get_first_timestamp(topic, gt_topic):
 
-    for _ in range(0,2):
-        msg = rospy.wait_for_message(topic, rospy.AnyMsg)
-        
+    # Need to wait for both the Ground Truth AND a first estimation. Only then the poses start to get matched against the GT.
+    gt_msg = rospy.wait_for_message(gt_topic, rospy.AnyMsg)
+    msg = rospy.wait_for_message(topic, rospy.AnyMsg)
+
     # Try to deserialize the header if it exists
     msg_class, real_topic, _ = get_topic_class(topic)
 
@@ -65,11 +66,12 @@ class DropManager:
         # Load parameters
         self.drop_config = rospy.get_param("drop_list")
         self.algo_topic = rospy.get_param("algo_topic")
+        self.gt_topic = rospy.get_param("gt_topic")
         self.update_interval = rospy.Duration(0.1)  # Check every 0.1 second
 
         self.init_nodes() 
 
-        self.node_start_time = get_first_timestamp(self.algo_topic)
+        self.node_start_time = get_first_timestamp(self.algo_topic, self.gt_topic)
         
         # Start periodic update
         self.timer = rospy.Timer(self.update_interval, self.update_nodes)
